@@ -136,6 +136,8 @@ public class MainActivity extends AppCompatActivity {
         btnRegister.setVisibility(View.GONE);
         btnLogin.setVisibility(View.GONE);
         btnLogout.setVisibility(View.VISIBLE);
+        
+        startActivity(new Intent(this,HomeActivity.class));
     }
 
     private void initView() {
