@@ -1,15 +1,24 @@
 package com.jaroid.android51_demofirebase;
 
+import android.Manifest;
+import android.app.NotificationManager;
+import android.content.Context;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.gms.tasks.OnCompleteListener;
@@ -47,6 +56,7 @@ public class HomeActivity extends AppCompatActivity {
     private DatabaseReference databaseReference;
     private ArrayList<ChatMessageModel> mListMessageHistory;
     private HistoryAdapter historyAdapter;
+    private String userName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,8 +70,8 @@ public class HomeActivity extends AppCompatActivity {
     private void initData() {
         mListMessageHistory = new ArrayList<>();
         mListMessageHistory.clear();
-        String name = firebaseUser.getEmail().substring(0, firebaseUser.getEmail().indexOf("@"));
-        historyAdapter = new HistoryAdapter(mListMessageHistory, name);
+        userName = firebaseUser.getEmail().substring(0, firebaseUser.getEmail().indexOf("@"));
+        historyAdapter = new HistoryAdapter(mListMessageHistory, userName);
     }
 
     private void initFirebase() {
@@ -110,6 +120,9 @@ public class HomeActivity extends AppCompatActivity {
                 mListMessageHistory.add(chatMessageModel);
                 historyAdapter.addData(chatMessageModel);
                 rvMessageHistory.scrollToPosition(mListMessageHistory.size() - 1);
+                if (!chatMessageModel.getName().trim().equals(userName)) {
+                    showNotification(chatMessageModel);
+                }
             }
 
             @Override
@@ -134,6 +147,52 @@ public class HomeActivity extends AppCompatActivity {
 
             }
         });
+    }
+
+    private synchronized void showNotification(ChatMessageModel chatMessageModel) {
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
+        builder.setContentTitle(chatMessageModel.getName());
+        builder.setContentText(chatMessageModel.getChatMessage().getMessage());
+        builder.setPriority(NotificationCompat.PRIORITY_DEFAULT);
+        builder.setSmallIcon(R.drawable.ic_send);
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            ActivityCompat.requestPermissions(HomeActivity.this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
+            return;
+        }
+        NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            mNotificationManager.notify(0, builder.build());
+        } else {
+            NotificationManagerCompat.from(this).notify(0, builder.build());
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        switch (requestCode) {
+            case 1: {
+
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(this, "Permission granted", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(HomeActivity.this, "Permission denied", Toast.LENGTH_SHORT).show();
+                }
+                return;
+            }
+
+            // other 'case' lines to check for other
+            // permissions this app might request
+        }
     }
 
     private void updateUI(ArrayList<ChatMessageModel> mListMessageHistory) {
@@ -161,6 +220,8 @@ public class HomeActivity extends AppCompatActivity {
             ChatMessageModel chatMessageModel = new ChatMessageModel();
             chatMessageModel.setName(name);
             chatMessageModel.setChatMessage(chatMessage);
+
+            showNotification(chatMessageModel);
 
             dataRefRoomChat.push().setValue(chatMessageModel).addOnCompleteListener(new OnCompleteListener<Void>() {
                 @Override
