@@ -22,6 +22,7 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -45,6 +46,7 @@ public class HomeActivity extends AppCompatActivity {
     private FirebaseUser firebaseUser;
     private DatabaseReference databaseReference;
     private ArrayList<ChatMessageModel> mListMessageHistory;
+    private HistoryAdapter historyAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,6 +60,8 @@ public class HomeActivity extends AppCompatActivity {
     private void initData() {
         mListMessageHistory = new ArrayList<>();
         mListMessageHistory.clear();
+        String name = firebaseUser.getEmail().substring(0, firebaseUser.getEmail().indexOf("@"));
+        historyAdapter = new HistoryAdapter(mListMessageHistory, name);
     }
 
     private void initFirebase() {
@@ -68,7 +72,6 @@ public class HomeActivity extends AppCompatActivity {
 
     private void initView() {
         ButterKnife.bind(this);
-
         Log.d("TAG", "initView: " + firebaseUser);
         btnSend.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -76,13 +79,37 @@ public class HomeActivity extends AppCompatActivity {
                 sendMessageToFirebase();
             }
         });
+        rvMessageHistory.setAdapter(historyAdapter);
+
         DatabaseReference dataRefRoomChat = firebaseDatabase.getReference("room_chat");
+        dataRefRoomChat.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+//                if (mListMessageHistory.size() == 0) {
+//                    for (DataSnapshot data : snapshot.getChildren()) {
+//                        ChatMessageModel chatMessageModel = data.getValue(ChatMessageModel.class);
+//                        mListMessageHistory.add(chatMessageModel);
+//                    }
+//                    if (mListMessageHistory.size() > 0) {
+//                        updateUI(mListMessageHistory);
+//                    }
+//                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.d("TAG", "onCancelled: " + error.getMessage());
+            }
+        });
+
         dataRefRoomChat.addChildEventListener(new ChildEventListener() {
             @Override
             public void onChildAdded(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
                 ChatMessageModel chatMessageModel = snapshot.getValue(ChatMessageModel.class);
                 Log.d("TAG", "onChildAdded: " + chatMessageModel.toString());
-
+                mListMessageHistory.add(chatMessageModel);
+                historyAdapter.addData(chatMessageModel);
+                rvMessageHistory.scrollToPosition(mListMessageHistory.size() - 1);
             }
 
             @Override
@@ -107,7 +134,10 @@ public class HomeActivity extends AppCompatActivity {
 
             }
         });
+    }
 
+    private void updateUI(ArrayList<ChatMessageModel> mListMessageHistory) {
+        historyAdapter.updateData(mListMessageHistory);
     }
 
     private void sendMessageToFirebase() {
