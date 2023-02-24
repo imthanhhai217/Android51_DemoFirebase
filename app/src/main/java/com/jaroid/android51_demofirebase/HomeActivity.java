@@ -1,6 +1,7 @@
 package com.jaroid.android51_demofirebase;
 
 import android.Manifest;
+import android.app.Notification;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
@@ -149,50 +150,17 @@ public class HomeActivity extends AppCompatActivity {
         });
     }
 
-    private synchronized void showNotification(ChatMessageModel chatMessageModel) {
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
-        builder.setContentTitle(chatMessageModel.getName());
-        builder.setContentText(chatMessageModel.getChatMessage().getMessage());
-        builder.setPriority(NotificationCompat.PRIORITY_DEFAULT);
-        builder.setSmallIcon(R.drawable.ic_send);
+    private void showNotification(ChatMessageModel chatMessageModel) {
+        Notification notification = new NotificationCompat.Builder(this)
+                .setContentTitle(chatMessageModel.getName())
+                .setContentText(chatMessageModel.getChatMessage().getMessage())
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setSmallIcon(R.drawable.ic_send)
+                .setChannelId(MyApplication.CHANNEL_ID)//Thiếu channel id nên trên android 8 k hiển thị
+                .build();
 
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
-            ActivityCompat.requestPermissions(HomeActivity.this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
-            return;
-        }
-        NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            mNotificationManager.notify(0, builder.build());
-        } else {
-            NotificationManagerCompat.from(this).notify(0, builder.build());
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        switch (requestCode) {
-            case 1: {
-
-                // If request is cancelled, the result arrays are empty.
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(this, "Permission granted", Toast.LENGTH_SHORT).show();
-                } else {
-                    Toast.makeText(HomeActivity.this, "Permission denied", Toast.LENGTH_SHORT).show();
-                }
-                return;
-            }
-
-            // other 'case' lines to check for other
-            // permissions this app might request
-        }
+        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        notificationManager.notify(0,notification);
     }
 
     private void updateUI(ArrayList<ChatMessageModel> mListMessageHistory) {
@@ -220,8 +188,6 @@ public class HomeActivity extends AppCompatActivity {
             ChatMessageModel chatMessageModel = new ChatMessageModel();
             chatMessageModel.setName(name);
             chatMessageModel.setChatMessage(chatMessage);
-
-            showNotification(chatMessageModel);
 
             dataRefRoomChat.push().setValue(chatMessageModel).addOnCompleteListener(new OnCompleteListener<Void>() {
                 @Override
