@@ -8,6 +8,9 @@ public class ChatMessageModel {
     private String avatar;
     private String date;
 
+    public ChatMessageModel() {
+    }
+
     public ChatMessageModel(String uid, String email, String name, String avatar, String date) {
         this.uid = uid;
         this.email = email;
